@@ -83,7 +83,7 @@ class Huey(object):
     def __init__(self, name='huey', results=True, store_none=False, utc=True,
                  immediate=False, serializer=None, compression=False,
                  use_zlib=False, immediate_use_memory=True, always_eager=None,
-                 storage_class=None, **storage_kwargs):
+                 storage_class=None, store_errors=False, **storage_kwargs):
         if always_eager is not None:
             warnings.warn('"always_eager" parameter is deprecated, use '
                           '"immediate" instead', DeprecationWarning)
@@ -99,6 +99,7 @@ class Huey(object):
         self.name = name
         self.results = results
         self.store_none = store_none
+        self.store_errors = store_errors
         self.utc = utc
         self._immediate = immediate
         self.immediate_use_memory = immediate_use_memory
@@ -394,12 +395,13 @@ class Huey(object):
                 except AttributeError:  # Seems to only happen on 3.4.
                     tb = '- unable to resolve traceback on Python 3.4 -'
 
-                self.put_result(task.id, Error({
-                    'error': repr(exception),
-                    'retries': task.retries,
-                    'traceback': tb,
-                    'task_id': task.id,
-                }))
+                if self.store_errors:
+                    self.put_result(task.id, Error({
+                        'error': repr(exception),
+                        'retries': task.retries,
+                        'traceback': tb,
+                        'task_id': task.id,
+                    }))
             elif task_value is not None or self.store_none:
                 self.put_result(task.id, task_value)
 
